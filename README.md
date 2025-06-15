@@ -1,6 +1,7 @@
 # Pomodoro Todo
 
 Personal todo app. Simple, clean and useful.
+And i'm a developer so i had to have a todo app in github right?
 
 ## Features
 
