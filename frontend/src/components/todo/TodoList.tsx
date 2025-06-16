@@ -4,8 +4,8 @@ import { TodoItem } from './TodoItem';
 
 interface TodoListProps {
   todos: Todo[];
-  onToggleTodo: (id: number, completed: boolean) => void;
-  onDeleteTodo: (id: number) => void;
+  onToggleTodo: (id: string, completed: boolean) => void;
+  onDeleteTodo: (id: string) => void;
   onEditTodo?: (todo: Todo) => void;
   isLoading?: boolean;
 }
@@ -85,10 +85,9 @@ export const TodoList: React.FC<TodoListProps> = ({
   });
 
   return (
-    <div className="space-y-4">
-      {sortedTodos.map(todo => (
+    <div className="space-y-4">      {sortedTodos.map(todo => (
         <TodoItem
-          key={todo.id}
+          key={todo._id}
           todo={todo}
           onToggle={onToggleTodo}
           onDelete={onDeleteTodo}

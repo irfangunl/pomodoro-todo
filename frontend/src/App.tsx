@@ -68,12 +68,12 @@ function App() {
     }
   };
 
-  const handleToggleTodo = async (id: number, completed: boolean) => {
+  const handleToggleTodo = async (id: string, completed: boolean) => {
     try {
       await apiService.toggleTodo(id, completed);
       setTodos(prev => 
         prev.map(todo => 
-          todo.id === id ? { ...todo, completed } : todo
+          todo._id === id ? { ...todo, completed } : todo
         )
       );
       loadStats(); // Refresh stats
@@ -84,14 +84,14 @@ function App() {
     }
   };
 
-  const handleDeleteTodo = async (id: number) => {
+  const handleDeleteTodo = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this todo?')) {
       return;
     }
 
     try {
       await apiService.deleteTodo(id);
-      setTodos(prev => prev.filter(todo => todo.id !== id));
+      setTodos(prev => prev.filter(todo => todo._id !== id));
       loadStats(); // Refresh stats
       setError(null);
     } catch (err) {

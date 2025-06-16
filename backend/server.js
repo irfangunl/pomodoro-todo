@@ -1,210 +1,229 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const connectDB = require('./config/database');
+const Todo = require('./models/Todo');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+connectDB();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Fake data - will connect to MongoDB later
-let todos = [
-  {
-    id: 1,
-    title: "Work with Pomodoro Technique",
-    description: "Focus for 25 minutes and take 5 minute breaks",
-    completed: false,
-    priority: "high",
-    category: "Work",
-    createdAt: new Date().toISOString(),
-    dueDate: null
-  },
-  {
-    id: 2,
-    title: "Prepare shopping list",
-    description: "Create weekly shopping list",
-    completed: true,
-    priority: "medium",
-    category: "Personal",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    dueDate: new Date(Date.now() + 86400000).toISOString()
-  },
-  {
-    id: 3,
-    title: "Yoga class",
-    description: "Yoga class at 7 PM",
-    completed: false,
-    priority: "low",
-    category: "Health",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    dueDate: new Date(Date.now() + 3600000).toISOString()
-  }
-];
-
 // Routes
 
 // GET - Get all todos
-app.get('/api/todos', (req, res) => {
-  const { category, priority, completed } = req.query;
-  
-  let filteredTodos = [...todos];
-  
-  if (category) {
-    filteredTodos = filteredTodos.filter(todo => 
-      todo.category.toLowerCase() === category.toLowerCase()
-    );
+app.get('/api/todos', async (req, res) => {
+  try {
+    const { category, priority, completed } = req.query;
+    
+    // Build filter object
+    let filter = {};
+    
+    if (category) {
+      filter.category = new RegExp(category, 'i'); // Case insensitive
+    }
+    
+    if (priority) {
+      filter.priority = priority;
+    }
+    
+    if (completed !== undefined) {
+      filter.completed = completed === 'true';
+    }
+    
+    const todos = await Todo.find(filter).sort({ createdAt: -1 });    
+    res.json({
+      success: true,
+      data: todos,
+      count: todos.length
+    });
+  } catch (error) {
+    console.error('Error fetching todos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching todos'
+    });
   }
-  
-  if (priority) {
-    filteredTodos = filteredTodos.filter(todo => 
-      todo.priority === priority
-    );
-  }
-  
-  if (completed !== undefined) {
-    filteredTodos = filteredTodos.filter(todo => 
-      todo.completed === (completed === 'true')
-    );
-  }
-  
-  res.json({
-    success: true,
-    data: filteredTodos,
-    count: filteredTodos.length
-  });
 });
 
 // GET - Get single todo by ID
-app.get('/api/todos/:id', (req, res) => {
-  const todo = todos.find(t => t.id === parseInt(req.params.id));
-  
-  if (!todo) {
-    return res.status(404).json({
+app.get('/api/todos/:id', async (req, res) => {
+  try {
+    const todo = await Todo.findById(req.params.id);
+    
+    if (!todo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Todo not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: todo
+    });
+  } catch (error) {
+    console.error('Error fetching todo:', error);
+    res.status(500).json({
       success: false,
-      message: 'Todo not found'
+      message: 'Error fetching todo'
     });
   }
-  
-  res.json({
-    success: true,
-    data: todo
-  });
 });
 
 // POST - Add new todo
-app.post('/api/todos', (req, res) => {
-  const { title, description, priority = 'medium', category = 'General', dueDate } = req.body;
-  
-  if (!title) {
-    return res.status(400).json({
+app.post('/api/todos', async (req, res) => {
+  try {
+    const { title, description, priority = 'medium', category = 'General', dueDate } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+    }
+    
+    const newTodo = new Todo({
+      title,
+      description: description || '',
+      priority,
+      category,
+      dueDate: dueDate || null
+    });
+    
+    const savedTodo = await newTodo.save();
+    
+    res.status(201).json({
+      success: true,
+      data: savedTodo,
+      message: 'Todo created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating todo:', error);
+    res.status(500).json({
       success: false,
-      message: 'Title is required'
+      message: 'Error creating todo'
     });
   }
-  
-  const newTodo = {
-    id: Math.max(...todos.map(t => t.id)) + 1,
-    title,
-    description: description || '',
-    completed: false,
-    priority,
-    category,
-    createdAt: new Date().toISOString(),
-    dueDate: dueDate || null
-  };
-  
-  todos.push(newTodo);
-  
-  res.status(201).json({
-    success: true,
-    data: newTodo,
-    message: 'Todo created successfully'
-  });
 });
 
 // PUT - Update todo
-app.put('/api/todos/:id', (req, res) => {
-  const todoIndex = todos.findIndex(t => t.id === parseInt(req.params.id));
-  
-  if (todoIndex === -1) {
-    return res.status(404).json({
+app.put('/api/todos/:id', async (req, res) => {
+  try {
+    const { title, description, completed, priority, category, dueDate } = req.body;
+    
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (completed !== undefined) updateData.completed = completed;
+    if (priority !== undefined) updateData.priority = priority;
+    if (category !== undefined) updateData.category = category;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
+    
+    const updatedTodo = await Todo.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedTodo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Todo not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: updatedTodo,
+      message: 'Todo updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating todo:', error);
+    res.status(500).json({
       success: false,
-      message: 'Todo not found'
+      message: 'Error updating todo'
     });
   }
-  
-  const { title, description, completed, priority, category, dueDate } = req.body;
-  
-  todos[todoIndex] = {
-    ...todos[todoIndex],
-    ...(title && { title }),
-    ...(description !== undefined && { description }),
-    ...(completed !== undefined && { completed }),
-    ...(priority && { priority }),
-    ...(category && { category }),
-    ...(dueDate !== undefined && { dueDate })
-  };
-  
-  res.json({
-    success: true,
-    data: todos[todoIndex],
-    message: 'Todo updated successfully'
-  });
 });
 
 // DELETE - Delete todo
-app.delete('/api/todos/:id', (req, res) => {
-  const todoIndex = todos.findIndex(t => t.id === parseInt(req.params.id));
-  
-  if (todoIndex === -1) {
-    return res.status(404).json({
+app.delete('/api/todos/:id', async (req, res) => {
+  try {
+    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
+    
+    if (!deletedTodo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Todo not found'
+      });
+    }    res.json({
+      success: true,
+      data: deletedTodo,
+      message: 'Todo deleted successfully'
+    });  } catch (error) {
+    console.error('Error deleting todo:', error);
+    res.status(500).json({
       success: false,
-      message: 'Todo not found'
+      message: 'Error deleting todo'
     });
   }
-  
-  const deletedTodo = todos.splice(todoIndex, 1)[0];
-  
-  res.json({
-    success: true,
-    data: deletedTodo,
-    message: 'Todo deleted successfully'
-  });
 });
 
 // GET - Get categories
-app.get('/api/categories', (req, res) => {
-  const categories = [...new Set(todos.map(todo => todo.category))];
-  
-  res.json({
-    success: true,
-    data: categories
-  });
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await Todo.distinct('category');
+    
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories'
+    });
+  }
 });
 
 // GET - Statistics
-app.get('/api/stats', (req, res) => {
-  const total = todos.length;
-  const completed = todos.filter(t => t.completed).length;
-  const pending = total - completed;
-  const byPriority = {
-    high: todos.filter(t => t.priority === 'high').length,
-    medium: todos.filter(t => t.priority === 'medium').length,
-    low: todos.filter(t => t.priority === 'low').length
-  };
-  
-  res.json({
-    success: true,
-    data: {
-      total,
-      completed,
-      pending,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      byPriority
-    }
-  });
+app.get('/api/stats', async (req, res) => {
+  try {
+    const todos = await Todo.find({});
+    
+    const total = todos.length;
+    const completed = todos.filter(t => t.completed).length;
+    const pending = total - completed;
+    const byPriority = {
+      high: todos.filter(t => t.priority === 'high').length,
+      medium: todos.filter(t => t.priority === 'medium').length,
+      low: todos.filter(t => t.priority === 'low').length
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        total,
+        completed,
+        pending,
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+        byPriority
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching statistics'
+    });
+  }
 });
 
 // Health check

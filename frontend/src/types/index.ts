@@ -1,11 +1,13 @@
 export interface Todo {
-  id: number;
+  _id: string;
+  id?: string; // For backward compatibility
   title: string;
   description: string;
   completed: boolean;
   priority: 'low' | 'medium' | 'high';
   category: string;
   createdAt: string;
+  updatedAt?: string;
   dueDate: string | null;
 }
 

@@ -4,8 +4,8 @@ import { Card, Button } from '../ui';
 
 interface TodoItemProps {
   todo: Todo;
-  onToggle: (id: number, completed: boolean) => void;
-  onDelete: (id: number) => void;
+  onToggle: (id: string, completed: boolean) => void;
+  onDelete: (id: string) => void;
   onEdit?: (todo: Todo) => void;
 }
 
@@ -33,9 +33,8 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   return (
     <Card className={`transition-all duration-200 ${todo.completed ? 'opacity-75' : ''}`}>
       <div className="flex items-start space-x-3">
-        {/* Checkbox */}
-        <button
-          onClick={() => onToggle(todo.id, !todo.completed)}
+        {/* Checkbox */}        <button
+          onClick={() => onToggle(todo._id, !todo.completed)}
           className={`
             mt-1 w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center
             ${todo.completed 
@@ -119,11 +118,10 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               </svg>
             </Button>
           )}
-          
-          <Button
+            <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(todo.id)}
+            onClick={() => onDelete(todo._id)}
             className="text-gray-400 hover:text-red-600"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -41,8 +41,7 @@ class ApiService {
     
     return this.request<Todo[]>(endpoint);
   }
-
-  async getTodo(id: number): Promise<ApiResponse<Todo>> {
+  async getTodo(id: string): Promise<ApiResponse<Todo>> {
     return this.request<Todo>(`/todos/${id}`);
   }
 
@@ -53,20 +52,20 @@ class ApiService {
     });
   }
 
-  async updateTodo(id: number, updates: UpdateTodoRequest): Promise<ApiResponse<Todo>> {
+  async updateTodo(id: string, updates: UpdateTodoRequest): Promise<ApiResponse<Todo>> {
     return this.request<Todo>(`/todos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
-  async deleteTodo(id: number): Promise<ApiResponse<Todo>> {
+  async deleteTodo(id: string): Promise<ApiResponse<Todo>> {
     return this.request<Todo>(`/todos/${id}`, {
       method: 'DELETE',
     });
   }
 
-  async toggleTodo(id: number, completed: boolean): Promise<ApiResponse<Todo>> {
+  async toggleTodo(id: string, completed: boolean): Promise<ApiResponse<Todo>> {
     return this.updateTodo(id, { completed });
   }
 
